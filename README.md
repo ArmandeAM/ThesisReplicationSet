@@ -95,7 +95,7 @@ This project replicates the analyses described in my Master's Thesis. The key co
 1. **Clone the Repository:**
    - Run the following command in your terminal:
      ```bash
-     git clone https://github.com/yourusername/Aboudrar-Méda_Armande_MasterThesis_DS.git
+     git clone https://github.com/ArmandeAM/ThesisReplicationSet.git
      ```
    - Alternatively, download and extract the ZIP archive.
 
@@ -108,7 +108,8 @@ This project replicates the analyses described in my Master's Thesis. The key co
      source("config.R")
      ```
      
-     This will install (if needed) and load all required packages and set up the directory paths.
+     This will install (if needed) and load all required packages and set up
+     the directory paths.
 
 4. **Knit the Analysis Document:**
    - Open the RMarkdown file located at `Scripts/Aboudrar-Méda_Armande_Thesis_DS.Rmd` in RStudio.
