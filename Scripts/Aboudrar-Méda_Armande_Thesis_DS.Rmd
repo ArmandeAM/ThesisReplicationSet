@@ -1,0 +1,1255 @@
+---
+title: "Final"
+output: html_document
+date: "2025-04-21"
+---
+
+```{r setup, include=FALSE}
+library(here)
+source(here("config.R"))
+
+# sourcing each module in order
+source(here("Scripts/01_load_data.R"))
+source(here("Scripts/02_preprocess.R"))
+source(here("Scripts/03_eda.R"))
+source(here("Scripts/04_efa.R"))
+source(here("Scripts/05_cfa.R"))
+source(here("Scripts/06_clustering.R"))
+source(here("Scripts/07_objective.R"))
+source(here("Scripts/08_modelingShortage.R"))
+source(here("Scripts/09_modelingInequity.R"))
+source(here("Scripts/10_SEMShortage.R"))
+
+knitr::opts_chunk$set(
+  echo    = TRUE,
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+
+# 1. Data Loading
+
+*All data were loaded and merged via* `Scripts/01_load_data.R`.  
+
+```{r zeat-map, echo=FALSE}
+ggplot(data = zeat_geometry) +
+  geom_sf() +
+  geom_sf_text(aes(label = ZEAT_Nb), size = 3, color = "blue") +
+  theme_minimal() +
+  labs(title = "Aggregated Geometry by ZEAT",
+       x = "Longitude",
+       y = "Latitude")
+```
+
+```{r show-data-head, echo=FALSE}
+knitr::kable(head(Barometre_2021),
+             caption = "First rows of the 2021 Baromètre dataset")
+```
+
+
+# 2. Pre-processing 
+
+*All “NSP” (“no opinion”) responses were recoded to missing, and item directionality was aligned so that higher values uniformly indicate greater shortages, inequity, trust or support for welfare (see Section 2.1 in the thesis).* `Scripts/02_preprocess.R`.  
+
+# 3. Exploratory Data Analysis 
+
+*We begin by examining two key subjective blocks:*
+1. *SA06 fairness items (quality of care and waiting times by income/location).*  
+2. *SA09 availability items (“too few” vs. “enough” vs. “too many” health professionals).*  
+
+*Table 1 shows that a majority perceive inequities in quality and waiting times, with numbers varying according to the ZEAT region, while the proportions of "not enough" depends on the type of practitioners : from 62.4% for specialists to 11.3% for pharmacists.* `Scripts/03_eda.R`.  
+
+
+```{r sa06-overall, echo=FALSE}
+knitr::kable(sa06_table, caption="Inequity items (SA06)")
+```
+
+```{r sa06-region, echo=FALSE}
+knitr::kable(sa06_by_region, caption="SA06: % Agree by Region")
+```
+
+```{r sa09-overall, echo=FALSE}
+knitr::kable(sa09_table, caption="Accessibility items (SA09)")
+```
+
+```{r sa06-region, echo=FALSE}
+knitr::kable(sa09_table_sdreg, caption="SA09 by Region")
+```
+
+# 4. Exploratory Factor Analysis 
+
+
+*All the steps concerning the Exploratory factor Analysis were led in* `Scripts/04_efa.R`.  
+
+Matrices of items (blocks) conceptually related were created: 
+
+*To reduce dimensionality, we ran an EFA on each block using **polychoric** correlations (since all items are ordinal) and verified factorability via KMO and Bartlett’s. They confirmed that the variables are sufficiently inter‑correlated for factors to exist.
+
+- **Healthcare perceptions** → 2 factors (“shortages” vs. “inequity”) in line with Penchansky & Thomas (1981).  
+- **Trust** → 3 factors (medical/scientific, political/public, online/social).  
+- **Socio-political attitudes** → Theory and scree plots suggested between two and three factors (with three factors “universalist benefits,” “contributory benefits,” “social protection”; Grislain-Letrémy & Papuchon 2017). However, to avoid estimation issues (e.g. Heywood cases) and because all benefit items loaded coherently, we collapsed them into a single “benefits” factor alongside “social protection” in the clustering step.  
+- **Inequality trends** → 1 factor, so we used an additive index (it produced very similar results to factor scores).
+
+```{r matrices, echo=FALSE}
+print(health_items)
+print(trust_items)
+print(socio_political_items)
+print(inequa_items)
+print(region_items)
+```
+
+```{r missingness checks, echo=FALSE}
+print(health_missing) # Missingness for the items in each of the matrices was calculated: 
+print(trust_missing)
+print(sociopol_missing)
+print(inequalities_missing)
+```
+
+```{r polychoric correlations, echo=FALSE}
+print(health_poly) 
+print(trust_poly)
+print(sociopol_poly)
+print(inequa_poly)
+```
+
+```{r kmo/bartlett, echo=FALSE}
+# KMO and Bartlett's Tests: checking sampling adequacy and sphericity for each block
+# Healthcare Perceptions Block
+# Calculating KMO for healthcare perception items
+kmo_health <- KMO(health_poly)
+print("KMO for Healthcare Perception Items")
+print(kmo_health)
+
+# Bartlett’s test for healthcare perception items
+bartlett_health <- bart_spher(health_poly)
+print("Bartlett's Test for Healthcare Perception Items")
+print(bartlett_health)
+
+# Trust Block
+# Calculating KMO for trust items
+kmo_trust <- KMO(trust_poly)
+print("KMO for Trust Items")
+print(kmo_trust)
+
+# Bartlett’s test for trust items
+bartlett_trust <- bart_spher(trust_poly)
+print("Bartlett's Test for Trust Items")
+print(bartlett_trust)
+
+# Socio Pol Block
+# Calculating KMO for socio pol items
+kmo_sociopol <- KMO(sociopol_poly)
+print("KMO for Socio Pol Items")
+print(kmo_sociopol)
+
+# Bartlett’s test for trust items
+bartlett_sociopol <- bart_spher(sociopol_poly)
+print("Bartlett's Test for Socio Pol Items")
+print(bartlett_sociopol)
+```
+```{r screeplot, echo=FALSE}
+plot_scree(health_poly, "Scree Plot - Healthcare Perceptions")
+plot_scree(trust_poly, "Scree Plot - Trust")
+plot_scree(sociopol_poly, "Scree Plot - Socio-Political Attitudes")
+plot_scree(inequa_poly, "Scree Plot - Inequalities")
+```
+
+*A first EFA was ran on the polychoric correlations to confirm the choice of rotation method** In general, varimax (orthogonal) methods are chosen when the factors are expected to be uncorrelated, ie when having theoretical reasons to believe that the latent constructs are independent. Numerically, we can fix this "uncorrelation" to a correlation inferior to 0.3. Conversely to varimax, oblimin (oblique) is chosen when the factors may be correlated. It is used when wanting to allow some correlation among factors. For the selected items, we expect the dimensions of healthcare perceptions to be almost unrelated: the perceptions of local shortages of health practitioners and of inequity of care quality/waiting times by income and location should have a low correlation because they don't tackle the same dimensions of healthcare inequalities (different access-equity frameworks, Penchansky & Thomas, 1981, Aday & Andersen, 1974). Conversely, the items for trust, socio-political attitudes, and for inequalities (which have two items which are basically the same but one for current inequalities and the other for future ones) are expected to be more correlated and to have more dependent constructs. Empirically, these expectations are confirmed by the data. 
+
+
+```{r}
+factor_correlation_health <- health_fa_oblimin$r.scores
+factor_correlation_trust <- trust_fa_oblimin$r.scores
+factor_correlation_sociopol <- sociopol_fa_oblimin$r.scores
+factor_correlation_sociopol2 <- sociopol_fa_oblimin2$r.scores # sensitivity check 
+factor_correlation_inequa <- inequa_fa_oblimin$r.scores
+```
+
+```{r factorcorr, echo=FALSE}
+print(factor_correlation_health) # varimax 
+print(factor_correlation_trust) # oblimin 
+print(factor_correlation_sociopol) # oblimin 
+print(factor_correlation_sociopol2) # sensitivity check : oblimin
+print(factor_correlation_inequa) # oblimin
+```
+
+```{r finalloadings, echo=FALSE}
+print(health_fa_final)
+print(trust_fa_final)
+print(sociopol_fa_final)
+print(sociopol_fa_final2)
+print(inequa_fa_final)
+```
+
+```{r comparison, echo=FALSE}
+# Sensitivity checks for the healthcare perceptions items, that are the factors kept later in the analysis (MLM and SEM): check with different estimation methods. Very similar results. 
+cat("Minres extraction:\n")
+print(health_fa_minres)
+cat("\nPrincipal Axis Factoring extraction:\n")
+print(health_fa_pa)
+cat("\nMaximum Likelihood extraction:\n")
+print(health_fa_ml)
+```
+
+```{r cronenbachsalpha, echo=FALSE}
+visualize_alpha(alpha_values, factor_labels, "Reliability (Cronbach's Alpha) by Factor") # Cronbach's Alpha to check the internal consistency of the items forming each latent construct. 
+```
+
+```{r distributionfactor, echo=FALSE}
+# Distribution of each of the 10 factors: need to be especially careful with healthInequity and Inequalities, which have clustered, discrete distributions. 
+display_factor_distribution(Barometre_2021, "healthShortage")
+display_factor_distribution(Barometre_2021, "healthInequity")
+display_factor_distribution(Barometre_2021, "trustOnline")
+display_factor_distribution(Barometre_2021, "trustMedSci")
+display_factor_distribution(Barometre_2021, "trustPolPub")
+display_factor_distribution(Barometre_2021, "familyHealth")
+display_factor_distribution(Barometre_2021, "SocialProtection2")
+display_factor_distribution(Barometre_2021, "UnemploymentPensions")
+display_factor_distribution(Barometre_2021, "benefits")
+display_factor_distribution(Barometre_2021, "SocialProtection")
+display_factor_distribution(Barometre_2021, "Inequalities")
+```
+
+# 5. Confirmatory Factor Analysis 
+
+*We then validated each solution via CFA with WLSMV (appropriate for ordinal indicators). Fit indices (CFI > .97; RMSEA < .05) supported our two-factor healthcare model, three-factor trust model,two-factor socio-political attitudes model. We also compared a 2- vs. 3-factor solution for healthcare items, while the 3-factor split slightly improved fit, no variables loaded on the hypothesised “third” factor, so we retained the 2-factor model.*`Scripts/05_cfa.R`
+
+```{r cfasummaries, echo=FALSE}
+summary(fit_health, fit.measures = TRUE, standardized = TRUE)
+summary(fit_trust_3f, fit.measures = TRUE, standardized = TRUE)
+summary(fit_socio3, fit.measures = TRUE, standardized = TRUE)
+summary(fit_socio2, fit.measures = TRUE, standardized = TRUE)
+```
+
+```{r 3factorsHealthPerceptionsEFA, echo=FALSE}
+# Sensitivity check : 3 factors for Healthcare Perceptions: better fit in the CFA but no variable load in the third factor. 
+print("Factor Analysis for Healthcare Perceptions:")
+print(health_fa_oblimin_3fac)
+
+print("Factor Analysis for Healthcare Perceptions:")
+print(health_fa_oblimin_3fac)
+
+print(factor_correlation_health_3fac)
+
+print(health_fa_final_3fac)
+```
+
+```{r 3factorsHealthPerceptionsCFA, echo=FALSE}
+summary(fit_health3, fit.measures = TRUE, standardized = TRUE)
+```
+
+```{r lavtest, echo=FALSE}
+lavTestLRT(fit_health, fit_health3)
+```
+
+# 6. Clustering
+
+*Using the nine factor scores, we applied a **hybrid** Ward→k-means approach (Clatworthy et al. 2005). The elbow and silhouette analyses both pointed to **k = 3** clusters, which we label:*
+1. *Cluster 1: High trust & neutral welfare (optimistic).*  
+2. *Cluster 2: Low trust & anti-welfare (satisfied).*  
+3. *Cluster 3: Low trust & pro-welfare (concerned).*  
+`Scripts/06_clustering.R`
+
+```{r clustering-with-inequality_trend, echo=FALSE}
+# Define the variables to use in clustering
+cluster_vars <- c("healthShortage", "healthInequity", 
+                  "trustOnline", "trustMedSci", "trustPolPub", 
+                  "familyHealth", "SocialProtection2", 
+                  "UnemploymentPensions", "inequality_trend")
+
+# Prepare the data for clustering
+cluster_prep <- prepare_cluster_data(Barometre_2021, cluster_vars)
+scaled_data <- cluster_prep$data_scaled
+complete_idx <- cluster_prep$complete_idx
+
+# Plot the elbow method to decide on the number of clusters
+plot_elbow(scaled_data, max_k = 10)
+
+# Plot the distributions of the scaled cluster data variables
+plot_cluster_distributions(scaled_data)
+
+# Suppose we decide on k = 3 based on the above analyses:
+set.seed(123)
+km3 <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
+
+# Inspect cluster centers and sizes:
+print(as.data.frame(km3$centers))
+print(table(km3$cluster))
+
+# Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3$cluster, "cluster_k3")
+
+# Suppose we decide on k = 3 based on the above analyses:
+set.seed(123)
+km4 <- run_kmeans_for_k(scaled_data, k = 4, nstart = 25)
+
+# Inspect cluster centers and sizes:
+print(as.data.frame(km4$centers))
+print(table(km4$cluster))
+
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km4$cluster, "cluster_k4")
+
+# --- Ward-based (Hybrid) Clustering ---
+
+# Run Ward-initiated k-means for k = 3
+km_ward3 <- run_ward_kmeans(scaled_data, k = 3)
+print(as.data.frame(km_ward3$centers))
+print(table(km_ward3$cluster))
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3$cluster, "cluster_ward_k3")
+```
+
+```{r clustering-without-inequality_trend, echo=FALSE}
+# Define the variables to use in clustering
+cluster_vars <- setdiff(cluster_vars, "inequality_trend")
+
+# Prepare the data for clustering
+cluster_prep <- prepare_cluster_data(Barometre_2021, cluster_vars)
+scaled_data <- cluster_prep$data_scaled
+complete_idx <- cluster_prep$complete_idx
+
+# Plot the elbow method to decide on the number of clusters
+plot_elbow(scaled_data, max_k = 10)
+
+# Plot the distributions of the scaled cluster data variables
+plot_cluster_distributions(scaled_data)
+
+# Suppose we decide on k = 3 based on the above analyses:
+set.seed(123)
+km3 <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
+
+# Inspect cluster centers and sizes:
+print(as.data.frame(km3$centers))
+print(table(km3$cluster))
+
+# Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3$cluster, "cluster_k3")
+
+# Suppose we decide on k = 3 based on the above analyses:
+set.seed(123)
+km4 <- run_kmeans_for_k(scaled_data, k = 4, nstart = 25)
+
+# Inspect cluster centers and sizes:
+print(as.data.frame(km4$centers))
+print(table(km4$cluster))
+
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km4$cluster, "cluster_k4")
+
+# --- Ward-based (Hybrid) Clustering ---
+
+# Run Ward-initiated k-means for k = 3
+km_ward3 <- run_ward_kmeans(scaled_data, k = 3)
+print(as.data.frame(km_ward3$centers))
+print(table(km_ward3$cluster))
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3$cluster, "cluster_ward_k3")
+```
+
+```{r clustering-with-sociopol2, echo=FALSE}
+# Define the variables to use in clustering
+cluster_vars <- c("healthShortage", "healthInequity", 
+                  "trustOnline", "trustMedSci", "trustPolPub", 
+                  "benefits", "SocialProtection")
+
+# Prepare the data for clustering
+cluster_prep <- prepare_cluster_data(Barometre_2021, cluster_vars)
+scaled_data <- cluster_prep$data_scaled
+complete_idx <- cluster_prep$complete_idx
+
+# Plot the elbow method to decide on the number of clusters
+plot_elbow(scaled_data, max_k = 10)
+
+# Plot the distributions of the scaled cluster data variables
+plot_cluster_distributions(scaled_data)
+
+# Suppose we decide on k = 3 based on the above analyses:
+set.seed(123)
+km3 <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
+
+# Inspect cluster centers and sizes:
+print(as.data.frame(km3$centers))
+print(table(km3$cluster))
+
+# Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3$cluster, "cluster_k3")
+
+# Suppose we decide on k = 3 based on the above analyses:
+set.seed(123)
+km4 <- run_kmeans_for_k(scaled_data, k = 4, nstart = 25)
+
+# Inspect cluster centers and sizes:
+print(as.data.frame(km4$centers))
+print(table(km4$cluster))
+
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km4$cluster, "cluster_k4")
+
+# --- Ward-based (Hybrid) Clustering ---
+
+# Run Ward-initiated k-means for k = 3
+km_ward3 <- run_ward_kmeans(scaled_data, k = 3)
+print(as.data.frame(km_ward3$centers))
+print(table(km_ward3$cluster))
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3$cluster, "cluster_ward_k3")
+```
+
+```{r interpretation-lastcluster-kmward}
+# Creating a dataframe with cluster interpretations
+cluster_interpretation <- data.frame(
+  Cluster = c("Cluster 1 (n=1020): High trust and neutral welfare", "Cluster 2 (n=725): Anti welfare and Low trust", "Cluster 3 (n=1213): Concerned, Low Trust, Pro welfare"),
+  Description = c(
+    "Healthcare Perceptions: Respondents report slightly below average perceived health shortages (–0.10) and similar perceptions of inequity (–0.06). Trust: They exhibit very high trust in both online (≈ +1) and medical/scientific sources (≈ +1), with moderate trust in political/public sources (+0.53). Socio Political Attitudes: Their scores on the welfare related indicators (benefits: +0.115, SocialProtection: +0.07) are moderately positive or neutral.",
+    "Healthcare Perceptions: Respondents have the lowest perceived shortages (–0.27) with near neutral view on inequity (–0.02). Trust: Their trust scores are negative across all sources (trustOnline: –0.37, trustMedSci: –0.32, trustPolPub: –0.08). Socio Political Attitudes: They have the lowest score on the welfare-related measures (familyHealth: –1.1, SocialProtection: –0.96, UnemploymentPensions: –0.9) which indicates strongly anti-welfare positions",
+    "Healthcare Perceptions: Respondents here have the highest perceived shortages (+0.25) and a near neutral view on equality (+0.06). Trust: They exhibit low trust across all sources (trustOnline: –0.62, trustMedSci: –0.64, trustPolPub: –0.39). Socio Political Attitudes: Their welfare related scores are positive (benefits: +0.56, SocialProtection: +0.51) which indicates strong support for social welfare and benefits."
+  ),
+  Summary = c(
+    " This group is relatively optimistic: they perceive few healthcare shortages, trust information from online and medical sources strongly, and have a neutral view on social welfare",
+    "This group is the most satisfied with the current state: they perceive far fewer shortages. They distrust online sources, doctor and scientists and have a neutral trust in politicians and journalists and are strongly anti-welfare, showing little support for state intervention and social benefits.",
+    "This cluster is characterised by concern: they perceive more healthcare shortages and have very low trust in information sources. At the same time, they strongly favor welfare and redistributive policies."
+  )
+)
+
+kable(cluster_interpretation, caption = "Cluster Interpretations")
+```
+
+
+# 7. Objective datasets
+
+*We standardised practitioner counts, beds, and fees per 100 000 using a population that’s re-weighted by each region’s age–sex profile (see Appendix A.1). This corrects for differences in health needs across demographies (Gusmano et al., 2014; Bithorel & Reduron, 2023).*  
+`Scripts/07_objective.R`
+
+```{r std-pop, echo=FALSE}
+total_pop_std <- sum(pop_sdreg_standardized$pop_std, na.rm = TRUE)
+cat("Total standardized population (fast check):", total_pop_std, "\n") # The total_pop_std gives a total population very close to the real Metropolitan France population. 
+```
+
+```{r show-mergedmap-head, echo=FALSE}
+print(head(merged_map))
+```
+
+```{r}
+habitat_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$habitat)
+habitat_df <- as.data.frame.matrix(habitat_table)
+colnames(habitat_df) <- c("Rural", "<20k", "20k-99k", "100k+", "Paris Agglo")
+rownames(habitat_df) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+kable(habitat_df, caption = "Distribution of Habitat by Cluster (Ward-Initiated K-means)")
+
+# Chi-square test on habitat distribution by cluster
+chi_res <- chisq.test(habitat_table)
+chi_summary <- data.frame(
+  X_Squared = round(chi_res$statistic, 2),
+  df = chi_res$parameter,
+  p_value = chi_res$p.value
+)
+kable(chi_summary, caption = "Chi-Square Test Summary")
+```
+
+```{r}
+sdnivie_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$sdnivie)
+
+sdnivie_prop <- prop.table(sdnivie_table, margin = 1) * 100
+
+sdnivie_df <- as.data.frame.matrix(round(sdnivie_prop, 1))
+
+rownames(sdnivie_df) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+colnames(sdnivie_df) <- c(
+  "1st Quintile", "2nd Quintile", "3rd Quintile", 
+  "4th Quintile", "5th Quintile"
+)
+
+kable(
+  sdnivie_df, 
+  caption = "Percentage Distribution of Standard of Living (sdnivie) by Ward-Initiated K-means Clusters"
+)
+
+chi_sdnivie <- chisq.test(sdnivie_table)
+
+chi_summary_sdnivie <- data.frame(
+  X_Squared = round(chi_sdnivie$statistic, 2),
+  df        = chi_sdnivie$parameter,
+  p_value   = chi_sdnivie$p.value
+)
+kable(chi_summary_sdnivie, caption = "Chi-Square Test Summary for sdnivie by Cluster")
+```
+
+```{r}
+Barometre_2021 <- Barometre_2021 %>%
+  mutate(sdpcs7_factor = factor(sdpcs7, 
+         levels = 1:7,
+         labels = c("Farmers", 
+                    "Artisan or shopkeeper", 
+                    "Liberal professions, senior executives",
+                    "Intermediate profession", 
+                    "Clerical worker", 
+                    "Manual worker", 
+                    "Other inactive")
+         ))
+
+sdpcs7_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$sdpcs7_factor)
+
+sdpcs7_prop <- prop.table(sdpcs7_table, margin = 1) * 100
+sdpcs7_df <- as.data.frame.matrix(round(sdpcs7_prop, 1))
+
+rownames(sdpcs7_df) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+
+kable(sdpcs7_df, caption = "Percentage Distribution of Socio-Professional Category (SDPCS7) by Cluster (k=3)")
+
+chi_sdpcs7 <- chisq.test(sdpcs7_table)
+print(chi_sdpcs7)
+```
+
+```{r}
+Barometre_2021 <- Barometre_2021 %>%
+  mutate(
+    sdagetr_factor = factor(
+      sdagetr,
+      levels = 1:5,
+      labels = c("18–24", "25–34", "35–49", "50–64", "65+")
+    )
+  )
+
+# 2) Create a contingency table: cluster vs. age group
+age_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$sdagetr_factor)
+
+# 3) Calculate row-wise percentages (within each cluster)
+age_prop <- prop.table(age_table, margin = 1) * 100
+
+# 4) Convert to a data frame and round to one decimal
+age_df <- as.data.frame.matrix(round(age_prop, 1))
+
+# 5) Label the row names (clusters) as needed
+rownames(age_df) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+
+# 6) Print the distribution table using kable
+kable(age_df, caption = "Percentage Distribution of Age Group (SDAGETR) by Cluster (Ward-Initiated K-means)")
+
+# 7) Chi-square test to see if the distribution of age differs by cluster
+chi_age <- chisq.test(age_table)
+
+chi_summary_age <- data.frame(
+  X_Squared = round(chi_age$statistic, 2),
+  df        = chi_age$parameter,
+  p_value   = chi_age$p.value
+)
+kable(chi_summary_age, caption = "Chi-Square Test Summary for Age by Cluster")
+```
+
+```{r}
+Barometre_2021 <- Barometre_2021 %>%
+  mutate(
+    sddipl_factor = factor(
+      sddipl_recoded,
+      levels = 1:8,
+      labels = c(
+        "No diploma",                       # 1
+        "Primary certificate (CEP)",        # 2
+        "Old brevet / BEPC / brevet college",  # 3
+        "CAP / BEP",                        # 4
+        "Bac pro or tech",                  # 5
+        "General Bac",                      # 6
+        "Bac+2 or equivalent (DUT, BTS...)",# 7
+        "Higher diploma (L3, M1, M2...)"    # 8
+      )
+    )
+  )
+
+diploma_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$sddipl_factor)
+
+diploma_prop <- prop.table(diploma_table, margin = 1) * 100
+
+diploma_df <- as.data.frame.matrix(round(diploma_prop, 1))
+
+rownames(diploma_df) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+
+kable(
+  diploma_df, 
+  caption = "Percentage Distribution of Diplomas (SDDIPL) by Ward-Initiated K-means Clusters"
+)
+
+chi_diploma <- chisq.test(diploma_table)
+
+chi_summary_diploma <- data.frame(
+  X_Squared = round(chi_diploma$statistic, 2),
+  df        = chi_diploma$parameter,
+  p_value   = chi_diploma$p.value
+)
+kable(
+  chi_summary_diploma, 
+  caption = "Chi-Square Test Summary for Diploma by Cluster"
+)
+```
+
+```{r}
+sdreg_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$sdreg)
+
+sdreg_prop <- prop.table(sdreg_table, margin = 1) * 100
+
+sdreg_df <- as.data.frame.matrix(round(sdreg_prop, 1))
+
+rownames(sdreg_df) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+colnames(sdreg_df) <- c(
+  "Paris Region", "East Paris Basin", "Western Paris Basin", 
+  "North", "East", "West", "Southwest", "Central East", "Meditteranean"
+)
+
+kable(
+  sdreg_df, 
+  caption = "Percentage Distribution of ZEAT region by Ward-Initiated K-means Clusters"
+)
+
+chi_sdreg <- chisq.test(sdreg_table)
+
+chi_summary_sdreg <- data.frame(
+  X_Squared = round(chi_sdreg$statistic, 2),
+  df        = chi_sdreg$parameter,
+  p_value   = chi_sdreg$p.value
+)
+kable(chi_summary_sdreg, caption = "Chi-Square Test Summary for sdreg by Cluster")
+```
+
+# 7.1 Comparison: maps
+
+```{r maps}
+merged_map <- merged_map %>% # Maps are created to compare the perceptions to the objective datasets. 
+  rename(sdreg = ZEAT_Nb)
+
+df_compare <- merged_map %>%
+  select(sdreg, generalistes_per_100k, specialistes_per_100k, infirmiers_per_100k, 
+         kines_per_100k, sages_femmes_per_100k, chirurgiens_dentistes_per_100k) %>%
+  left_join(sa09_wide, by = "sdreg")
+```
+
+```{r}
+var_map <- tibble::tribble(
+  ~objective,                   ~subjective,
+  "generalistes_per_100k",      "General Practitioners_prop_notenough",
+  "specialistes_per_100k",      "Specialists_prop_notenough",
+  "infirmiers_per_100k",        "Nurses_prop_notenough",
+  "kines_per_100k",             "Masseurs-Physio_prop_notenough",
+  "chirurgiens_dentistes_per_100k",      "Dentists_prop_notenough"
+)
+```
+
+```{r}
+p_obj <- ggplot(df_compare) +
+  geom_sf(aes(fill = generalistes_per_100k), color = "black ") +
+  scale_fill_viridis_c(option = "plasma", name = "GPs per 100k") +
+  labs(title = "Objective: Generalists per 100k") +
+  theme_minimal()
+```
+
+```{r}
+spe_obj <- ggplot(df_compare) +
+  geom_sf(aes(fill = specialistes_per_100k), color = "black ") +
+  scale_fill_viridis_c(option = "plasma", name = "GPs per 100k") +
+  labs(title = "Objective: Specialists per 100k") +
+  theme_minimal()
+```
+
+```{r}
+nurses_obj <- ggplot(df_compare) +
+  geom_sf(aes(fill = infirmiers_per_100k), color = "black ") +
+  scale_fill_viridis_c(option = "plasma", name = "GPs per 100k") +
+  labs(title = "Objective: Nurses per 100k") +
+  theme_minimal()
+```
+
+```{r}
+kine_obj <- ggplot(df_compare) +
+  geom_sf(aes(fill = kines_per_100k), color = "black ") +
+  scale_fill_viridis_c(option = "plasma", name = "GPs per 100k") +
+  labs(title = "Objective: Kine per 100k") +
+  theme_minimal()
+```
+
+```{r}
+dentists_obj <- ggplot(df_compare) +
+  geom_sf(aes(fill = chirurgiens_dentistes_per_100k), color = "black ") +
+  scale_fill_viridis_c(option = "plasma", name = "GPs per 100k") +
+  labs(title = "Objective: Dentists per 100k") +
+  theme_minimal()
+```
+
+```{r}
+p_sub <- ggplot(df_compare) +
+  geom_sf(aes(fill = `General Practitioners_prop_notenough`), color = "black") +
+  scale_fill_viridis_c(option = "plasma", direction = -1, name = "% Not Enough") +
+  labs(title = "Subjective: Perceived GP Shortage") +
+  theme_minimal()
+```
+
+```{r}
+spe_sub <- ggplot(df_compare) +
+  geom_sf(aes(fill = `Specialists_prop_notenough`), color = "black") +
+  scale_fill_viridis_c(option = "plasma", direction = -1, name = "% Not Enough") +
+  labs(title = "Subjective: Perceived Specialists Shortage") +
+  theme_minimal()
+```
+
+```{r}
+nurses_sub <- ggplot(df_compare) +
+  geom_sf(aes(fill = `Nurses_prop_notenough`), color = "black") +
+  scale_fill_viridis_c(option = "plasma", direction = -1, name = "% Not Enough") +
+  labs(title = "Subjective: Perceived Nurses Shortage") +
+  theme_minimal()
+```
+
+```{r}
+kine_sub <- ggplot(df_compare) +
+  geom_sf(aes(fill = `Masseurs-Physio_prop_notenough`), color = "black") +
+  scale_fill_viridis_c(option = "plasma", direction = -1, name = "% Not Enough") +
+  labs(title = "Subjective: Perceived Kine Shortage") +
+  theme_minimal()
+```
+
+```{r}
+dentists_sub <- ggplot(df_compare) +
+  geom_sf(aes(fill = `Dentists_prop_notenough`), color = "black") +
+  scale_fill_viridis_c(option = "plasma", direction = -1, name = "% Not Enough") +
+  labs(title = "Subjective: Perceived Dentists Shortage") +
+  theme_minimal()
+```
+
+```{r}
+p_obj + p_sub
+```
+
+```{r}
+spe_obj + spe_sub
+```
+
+```{r}
+nurses_obj + nurses_sub
+```
+
+```{r}
+kine_obj + kine_sub
+```
+
+```{r}
+dentists_obj + dentists_sub
+```
+
+
+# 8. Modeling
+
+
+*We fit a linear mixed-effects model (LMM) of **healthShortage** on:*
+- *Trust indices*  
+- *Welfare attitudes indices*  
+- *Perceived inequality trend (Model 1 only)*  
+- *Objective availability & cost indices*  
+- *Controls (habitat, SES, education, occupation)*  
+- *Random intercept by ZEAT.*
+
+*A likelihood-ratio test (REML = FALSE) showed that adding **inequality_trend** did **not** improve fit (p = .27), so we dropped it in our final specification.*  `Scripts/08_modelingShortage.R`
+
+
+```{r model1}
+# The first model for healthShortage includes, at the individual level, three indices for trust aligning with the EFA and CFA results, two whole variables for socio-political attitudes (one tackling social protection and the other tackling health benefits). 
+summary(model_lmm)
+```
+
+```{r model1-checks}
+print(vifs)
+
+# 3. Residuals vs. Fitted Plot for the Mixed Model
+plot(fitted(model_lmm), resid(model_lmm),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted Values")
+abline(h = 0, col = "red")
+
+# 4. Residuals vs. Predictor Plots in a 2x4 grid
+df_used_model <- model.frame(model_lmm)  # data used in model_lmm
+df_used_model$resid <- residuals(model_lmm)
+predictors <- c("trustMedSci_index_std", "trustPolPub_index_std", "trustOnline_index_std",
+                "socio_attitude1_std", "socio_attitude2_std", "inequality_trend_scaled",
+                "healthcare_availability_index_scaled", "healthcare_cost_index_scaled")
+op <- par(mfrow = c(2, 4), mar = c(4, 4, 2, 1))
+for (var in predictors) {
+  plot(df_used_model[[var]], df_used_model$resid,
+       xlab = var, ylab = "Residuals",
+       main = paste("Residuals vs.", var))
+  abline(h = 0, col = "red")
+}
+par(op)
+
+# 5. QQ Plot for Model Residuals
+qqnorm(resid(model_lmm), main = "QQ Plot of Model Residuals")
+qqline(resid(model_lmm), col = "red")
+
+# 6. QQ Plot for Random Intercepts (sdreg)
+ranef_sdreg <- ranef(model_lmm)$sdreg[, "(Intercept)"]
+qqnorm(ranef_sdreg, main = "QQ Plot of Random Intercepts (sdreg)")
+qqline(ranef_sdreg, col = "red")
+```
+
+```{r model2}
+summary(model_lmm2) # In the model 2, at the individual level, the three indices for trust are kept. The socio-political attitudes variables include an index of variables related to social protection, an index of variable related to the benefits that have an "universalist" support and an index of variavles for benefits that have a "contributory" support. Inequality_trend is not included anymore.
+```
+
+```{r model2-checks}
+print(vifs)
+
+# 3. Residuals vs. Fitted Plot for the Mixed Model
+plot(fitted(model_lmm2), resid(model_lmm2),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted Values")
+abline(h = 0, col = "red")
+
+# 4. Residuals vs. Predictor Plots in a 2x4 grid
+df_used_model2 <- model.frame(model_lmm2)  # data used in model_lmm
+df_used_model2$resid <- residuals(model_lmm2)
+predictors2 <- c("trustMedSci_index_std", "trustPolPub_index_std", "trustOnline_index_std",
+                "familyHealth_index_std", "socialProtection_index_std", "unemploymentPensions_index_std",
+                "healthcare_availability_index_scaled", "healthcare_cost_index_scaled")
+op <- par(mfrow = c(2, 4), mar = c(4, 4, 2, 1))
+for (var in predictors2) {
+  plot(df_used_model2[[var]], df_used_model2$resid,
+       xlab = var, ylab = "Residuals",
+       main = paste("Residuals vs.", var))
+  abline(h = 0, col = "red")
+}
+par(op)
+
+# 5. QQ Plot for Model Residuals
+qqnorm(resid(model_lmm2), main = "QQ Plot of Model Residuals")
+qqline(resid(model_lmm2), col = "red")
+
+# 6. QQ Plot for Random Intercepts (sdreg)
+ranef_sdreg2 <- ranef(model_lmm2)$sdreg[, "(Intercept)"]
+qqnorm(ranef_sdreg2, main = "QQ Plot of Random Intercepts (sdreg)")
+qqline(ranef_sdreg2, col = "red")
+```
+
+```{r model3}
+summary(model_lmm3) # In the model 3, at the individual level, the socio-political attitudes are included through a social protection index (same as model 2), a benefit index that include the three benefits not related to health, and the whole variable of benefits related to health. 
+```
+
+```{r model3-checks}
+print(vifs)
+
+# 3. Residuals vs. Fitted Plot for the Mixed Model
+plot(fitted(model_lmm3), resid(model_lmm3),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted Values")
+abline(h = 0, col = "red")
+
+# 4. Residuals vs. Predictor Plots in a 2x4 grid
+df_used_model3 <- model.frame(model_lmm3)  # data used in model_lmm
+df_used_model3$resid <- residuals(model_lmm3)
+predictors3 <- c("trustMedSci_index_std", "trustPolPub_index_std", "trustOnline_index_std",
+                "benefits_index_std", "socialProtection_index_std", "socio_attitude1_std",
+                "healthcare_availability_index_scaled", "healthcare_cost_index_scaled")
+op <- par(mfrow = c(2, 4), mar = c(4, 4, 2, 1))
+for (var in predictors3) {
+  plot(df_used_model3[[var]], df_used_model3$resid,
+       xlab = var, ylab = "Residuals",
+       main = paste("Residuals vs.", var))
+  abline(h = 0, col = "red")
+}
+par(op)
+
+# 5. QQ Plot for Model Residuals
+qqnorm(resid(model_lmm3), main = "QQ Plot of Model Residuals")
+qqline(resid(model_lmm3), col = "red")
+
+# 6. QQ Plot for Random Intercepts (sdreg)
+ranef_sdreg3 <- ranef(model_lmm3)$sdreg[, "(Intercept)"]
+qqnorm(ranef_sdreg3, main = "QQ Plot of Random Intercepts (sdreg)")
+qqline(ranef_sdreg3, col = "red")
+```
+
+```{r model4}
+summary(model_lmm4) # Finally, in the last model we use for the final analysis, the model includes, at the individual level, for socio-political attitudes, one index for social protection, and one index of the four benefits together. 
+```
+
+```{r model4-checks}
+# 1. Residuals vs. Fitted Values
+resid_values <- resid(model_lmm4)
+fitted_values <- fitted(model_lmm4)
+plot(fitted_values, resid_values,
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted Values")
+abline(h = 0, col = "red")
+
+qqnorm(resid_values, main = "QQ Plot of Model Residuals")
+qqline(resid_values, col = "red")
+
+
+# 2. Random Effects Diagnostics (Random Intercepts for sdreg)
+ranef_sdreg <- ranef(model_lmm4)$sdreg[, "(Intercept)"]
+qqnorm(ranef_sdreg, main = "QQ Plot of Random Intercepts (sdreg)")
+qqline(ranef_sdreg, col = "red")
+
+
+# 3. Homoscedasticity: Boxplot of Residuals by Region
+df_used <- model.frame(model_lmm4)
+df_used$resid_values <- resid(model_lmm4)
+boxplot(resid_values ~ sdreg, data = df_used,
+        main = "Boxplot of Residuals by Region",
+        xlab = "Region (sdreg)", ylab = "Residuals")
+
+# 4. Multicollinearity Diagnostics
+vif(lm_for_vif)
+```
+
+Adding the random intercept for regions improves the fit of the model even if regional variation only explains 10% of the variance. 
+
+```{r model4-checkRI}
+cat("LR stat =", D, " df =", df_diff, " p =", p_val, "\n")
+```
+
+# 9. Modeling Inequity 
+
+*Because **healthInequity** is skewed and clustered, we fit both:*
+1. *A continuous LMM (for comparison).*  
+2. *A cumulative‐link mixed model (CLMM) on a 3-category version (equity/neutral/inequity).*
+
+*Trust in medical/science and pro-welfare attitudes are significantly associated with higher odds of reporting inequity.* `Scripts/09_modelingInequity.R`  
+
+```{r model-Inequity}
+summary(model_lmmInequa)
+```
+
+```{r model-Inequity-checks}
+# Residual diagnostics
+residuals_lmm <- resid(model_lmmInequa)
+
+# Histogram of residuals
+hist(residuals_lmm, main = "Histogram of Residuals", xlab = "Residuals")
+
+# Q-Q plot
+qqnorm(residuals_lmm)
+qqline(residuals_lmm, col = "red")
+
+# Density plot
+plot(density(residuals_lmm), main = "Density of Residuals")
+
+fitted_vals <- fitted(model_lmmInequa)
+
+plot(fitted_vals, residuals_lmm,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals vs Fitted")
+abline(h = 0, col = "red")
+
+shapiro.test(residuals_lmm)
+```
+
+```{r model-Inequity-plot}
+ggplot(Barometre_2021_final_nomiss, aes(x = healthInequity_cat)) +
+  geom_bar(fill = "#74c476") +
+  labs(title = "Distribution of healthInequity (Categorical)", x = "", y = "Count") +
+  theme_minimal()
+```
+
+```{r model-Inequity-clmm}
+summary(model_clmm)
+```
+
+```{r}
+# Comparison lmm and clmm 
+comparison_models <- data.frame(
+  Predictor = c(
+    "trustMedSci_index_std", 
+    "trustPolPub_index_std", 
+    "trustOnline_index_std", 
+    "benefits_all_index_std", 
+    "socialProtection_index_std", 
+    "inequality_trend_scaled", 
+    "healthcare_availability_index_scaled", 
+    "healthcare_cost_index_scaled"
+  ),
+  
+  `LMER Estimate` = c(
+    "-0.084", "-0.010", "-0.050", "-0.034", "+0.106", "+0.124", "-0.120", "+0.059"
+  ),
+  
+  `CLMM Estimate` = c(
+    "-0.153", "-0.034", "-0.072", "-0.045", "+0.174", "+0.221", "-0.231", "+0.090"
+  ),
+  
+  Significance = c(
+    "Significant in both", 
+    "Not significant", 
+    "Only marginal in CLMM", 
+    "Not significant", 
+    "Significant in both", 
+    "Significant in both", 
+    "Significant in CLMM only", 
+    "Not significant"
+  ),
+  
+  Interpretation = c(
+    "Higher trust in med/sci → lower inequality perception", 
+    "Small non-significant effect", 
+    "More trust online → less inequality perception (marginal)", 
+    "Same direction, not significant", 
+    "More support for social protection → more inequality perception", 
+    "Stronger perceived inequality trend → more inequality perception", 
+    "Better availability → less inequality perception", 
+    "Same direction, not significant"
+  )
+)
+
+kable(comparison_models, caption = "Comparison of the models for healthInequity")
+```
+
+```{r}
+comparison_models_controls <- data.frame(
+  Predictor = c(
+    "less than 20k inh", 
+    "more than 100k inh", 
+    "2nd quintile living", 
+    "4th quintile living", 
+    "5th quintile living"
+  ),
+  
+  `LMER Estimate` = c(
+    "+0.29", "+0.50", "+0.14", "+0.18", "+0.19"
+  ),
+  
+  `CLMM Estimate` = c(
+    "+0.44", "+0.95", "+0.26", "+0.34", "+0.36"
+  ),
+  
+  Significance = c(
+    "Significant in both", 
+    "in both", 
+    "in both", 
+    "in both", 
+    "in both"
+  ),
+  
+  Interpretation = c(
+    "Small town → ↑ perceived inequality", 
+    "Big city → ↑ perceived inequality", 
+    "↑ living standard → ↑ perceived inequality", 
+    "Stronger effect in clmm", 
+    "Stronger effect in clmm"
+  )
+)
+
+# Display the table
+kable(comparison_models_controls, caption = "Comparison of linear and ordinal model for healthInequity")
+```
+
+# 10. SEM Shortage
+
+
+*Finally, we integrate measurement and structural paths via a WLSMV‐based SEM. The latent **f_healthShortage** is regressed on the same set of predictors and controls. A multi‐group SEM by cluster confirms that the paths vary across respondent profiles, underscoring the value of combining factor, cluster, and SEM approaches.*  `Scripts/10_SEMShortage.R`
+
+
+```{r sem-shortage}
+summary(fit_sem, fit.measures = TRUE, standardized = TRUE)
+```
+
+```{r sem-shortage-cluster}
+summary(fit_mg, fit.measures = TRUE, standardized = TRUE)
+```
+
+# Other
+
+# Interpretation of the effects
+
+```{r interpret_lmm4}
+# For lmm4 for healthShortage
+library(broom.mixed)
+tidy_lmm4 <- tidy(model_lmm4, effects = "fixed", conf.int = TRUE)
+print(tidy_lmm4)
+
+# For clmm for healthInequity
+# extract the raw log‐odds (βs)
+betas <- summary(model_clmm)$beta
+
+# pull out the same parameters’ standard errors from the vcov()
+ses <- sqrt(diag(vcov(model_clmm)))[names(betas)]
+
+# build Wald CIs on the log‐odds scale, then exponentiate
+ci_logodds <- cbind(
+  lo = betas - 1.96 * ses,
+  hi = betas + 1.96 * ses
+)
+
+clmm_results <- data.frame(
+  Predictor = names(betas),
+  Estimate  = betas,
+  OR        = exp(betas),
+  CI_low    = exp(ci_logodds[, "lo"]),
+  CI_high   = exp(ci_logodds[, "hi"])
+)
+
+print(clmm_results, digits = 3)
+```
+
+```{r}
+# pull off the two cutpoints alpha and the fixed effects Beta
+alpha <- model_clmm$alpha           # vector of thresholds; alpha[2] is the cutpoint for "Perceive inequality"
+betas <- summary(model_clmm)$beta   # named vector of slopes
+
+# baseline P(Y="Perceive inequality") when all predictors = 0
+P0 <- 1 - plogis(alpha[2])
+
+# for each predictor, shift the linear predictor by beta and recompute P
+delta_pp <- sapply(betas, function(b) {
+  P1 <- 1 - plogis(alpha[2] - b)
+  100 * (P1 - P0)
+})
+
+# Table
+out <- data.frame(
+  Predictor = names(delta_pp),
+  `Δ pp`    = round(delta_pp, 1)
+)
+kable(out,
+      caption = "Change in percentage point probability of “Perceive inequality” per 1 SD increase")
+```
+
+# Dictionary of variables
+
+```{r}
+# Defining control variables in the dictionary
+control_vars <- data.frame(
+  VariableName = c("sdreg", "habitat", "sdagetr", "sdpcs7", "sdnivie", "sddipl", "sdstat"),
+  Description  = c(
+    "Region",
+    "Type of habitat",
+    "Age group",
+    "Socio‑professional category",
+    "Standard of living quintile",
+    "Highest diploma level",
+    "Employment status"
+  ),
+  Type       = c("Categorical", "Ordinal", "Ordinal", "Ordinal", "Ordinal", "Ordinal", "Categorical"),
+  Range      = c("1-9", "1–5", "1–5", "1–7", "1–5", "1–8", "1–6"),
+  Scale_Notes = c(
+    "1. Paris Region, 2. East Paris Basin, 3. Western Paris Basin, 4. North, 5. East, 6. West, 7. Southwest, 8. Central East, 9. mediterranean",
+    "1 = Rural; 2 = less than 20,000; 3 = 20,000–99,999; 4 = 100,000+; 5 = Paris Area",
+    "1. 18–24, 2. 25–34, 3. 35–49, 4. 50–64, 5. 65+",
+    "1 = Farmer; 2 = Craftsman or merchant; 3 = Liberal profession/executive; 4 = Intermediate profession; 5 = Employee; 6 = Manual worker; 7 = Other inactive",
+    "1 = 1er quintile (lowest) to 5 = 5ème quintile (highest)",
+    "1. No Diploma, 2. Primary School leaving certificate, 3. Middle School certificate, 4. CAP/BEP, 5. Vocational/technological baccalaureate, 6. General baccalaureate, 7. Bac+2, 8. Higher Diploma",
+    "1. Private Sector Employee, 2.Public Sector Employee, 3. Self-Employed without employee, 4.Employer, 5. Unemployed, 6. Inactive"
+  )
+)
+  
+# Defining objective variables in the dictionary 
+objective_vars <- data.frame(
+  VariableName = c(
+    "generalistes_per_100k", "specialistes_per_100k", "infirmiers_per_100k",
+    "kines_per_100k", "sages_femmes_per_100k", "chirurgiens_dentistes_per_100k",
+    "healthcare_availability_index", "healthcare_cost_index"
+  ),
+  Description = c(
+    "Number of general practitioners per 100k (standardized population)",
+    "Number of specialist doctors per 100k",
+    "Number of nurses per 100k",
+    "Number of masseurs-kinésithérapeutes per 100k",
+    "Number of midwives per 100k",
+    "Number of dentists per 100k",
+    "Average availability index across the 6 per-100k variables",
+    "Total dépassements (excess fees) per capita"
+  ),
+  Type       = rep("Continuous", 8),
+  Range      = rep("≥ 0 up to sample max", 8),
+  Scale_Notes = c(
+    "Ratio: (GP count / pop_std)*100000",
+    "Ratio: (specialists / pop_std)*100000",
+    "Ratio: (nurses / pop_std)*100000",
+    "Ratio: (kinés / pop_std)*100000",
+    "Ratio: (midwives / pop_std)*100000",
+    "Ratio: (dentists / pop_std)*100000",
+    "Mean of the 6 variables (per 100k), possibly scaled",
+    "Sum of dépassements / pop_std"
+  )
+)
+
+# Subjective variables in the items matrices 
+health_items2          <- dplyr::rename(health_items, VariableName = Item)
+trust_items2           <- dplyr::rename(trust_items, VariableName = Item)
+socio_political_items2 <- dplyr::rename(socio_political_items, VariableName = Item)
+inequa_items2          <- dplyr::rename(inequa_items, VariableName = Item)
+region_items2          <- dplyr::rename(region_items, VariableName = Item)
+
+# Binding everything into a single dictionary 
+complete_dictionary <- dplyr::bind_rows(
+  health_items2,
+  trust_items2,
+  socio_political_items2,
+  inequa_items2,
+  region_items2,
+  control_vars,
+  objective_vars
+)
+
+# Standardising the order of columns 
+complete_dictionary <- complete_dictionary %>%
+  dplyr::select(
+    dplyr::all_of(c("VariableName", "Description", "Type", "Range", "Scale_Notes"))
+  )
+
+# Exporting to excel 
+writexl::write_xlsx(complete_dictionary, file.path(DOCS_DIR, "My_Final_Variables_Dictionary.xlsx"))
+```
+
+=> This excel file has been corrected by hand to get the table that is in the Thesis. 
+
+```{r}
+# Choosing the objective variables that are in the dictionary 
+objective_var_names <- c(
+  "generalistes_per_100k",
+  "specialistes_per_100k",
+  "infirmiers_per_100k",
+  "kines_per_100k",
+  "sages_femmes_per_100k",
+  "chirurgiens_dentistes_per_100k",
+  "healthcare_availability_index",
+  "healthcare_cost_index"
+)
+
+# Computing the range (min - max) for each objective variable from the final dataset
+objective_range <- sapply(merged_per100000[, objective_var_names, drop = FALSE], function(x) {
+  paste0(round(min(x, na.rm = TRUE), 2), " - ", round(max(x, na.rm = TRUE), 2))
+})
+
+# Creating a summary data frame to view the results
+objective_range_df <- data.frame(
+  Variable = names(objective_range),
+  Range = objective_range,
+  row.names = NULL,
+  stringsAsFactors = FALSE
+)
+print(objective_range_df)
+```
+
+```{r}
+# Overleaf code for the final dictionary 
+dictionary <- read_xlsx(here("Docs", "Dictionary.xlsx"))
+
+latex_table <- dictionary %>%
+  kable(format = "latex", booktabs = TRUE, caption = "My Final Variables Dictionary") %>%
+  kable_styling(latex_options = c("hold_position", "striped", "scale_down"))
+
+cat(latex_table)
+```
+
+---
+
+## References
+
+Aday, L. A., & Andersen, R. (1974). A framework for the study of access to medical care. Health Services Research, 9(3), 208–220.
+
+Bithorel, P.-L., & Reduron, V. (2023, April). Dépenses de santé et restes à charge pour les patients: Comment expliquer les disparités entre départements? Études et résultats (1265). DREES.
+
+Claassen, C. (2022, November 29). Including measurement uncertainty in time-series, cross-sectional analyses: The case of mood and democracy. SSRN. http://dx.doi.org/10.2139/ssrn.3924934
+
+Clatworthy, J., Buick, D., Hankins, M., Weinman, J., & Horne, R. (2005). The use and reporting of cluster analysis in health psychology: A review. British Journal of Health Psychology, 10(Pt 3), 329–358. https://doi.org/10.1348/135910705X25697
+
+Grislain-Letremy, C., & Papuchon, A. (2017). La diminution du soutien aux transferts universels en France: Les conceptions du système de protection sociale ébranlées par la crise de 2008? Revue française des affaires sociales, 1, 205--229.https://doi.org/10.3917/rfas.171.0205
+
+Gusmano, M. K., Weisz, D., Rodwin, V. G., Lang, J., Qian, M., Bocquier, A., Moysan, V., & Verger, P. (2014). Disparities in access to health care in three French regions. Health policy (Amsterdam, Netherlands), 114(1), 31–40. https://doi.org/10.1016/j.healthpol.2013.07.011
+
+Penchansky, R., & Thomas, J. W. (1981). The concept of access: Definition and relationship to consumer satisfaction. Medical Care, 19(2), 127--140. https://doi.org/10.1097/00005650-198102000-00001
+
+Watkins,M. W. (2018). Exploratory Factor Analysis: A Guide to Best Practice. Journal of Black Psychology, 44(3), 219–246. https://doi.org/10.1177/0095798418771807
+
+---
+
