@@ -8,6 +8,7 @@ The analysis combines survey data: the Barometer from the DREES with 82,332 obse
 
 ## Repository Structure
 
+```text
 ThesisReplicationSet/
 ├── Data/
 │   ├── barometre/
@@ -52,7 +53,7 @@ ThesisReplicationSet/
 │
 ├── ThesisReplicationSet.Rproj                        # RStudio project file
 └── README.md                                         # This file
-
+```
 
 ---
 
