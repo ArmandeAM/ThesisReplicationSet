@@ -8,46 +8,51 @@ The analysis combines survey data: the Barometer from the DREES with 82,332 obse
 
 ## Repository Structure
 
-ThesisReplicationSet/ 
-├── **Data/** 
-│ ├── **barometre/** 
-│ │ └── barometre2000_2022_diff.csv     # DREES survey data 
-│ ├── **APL/**                              # APL Excel files + 'commune' csv  
-│ │ ├── APL_mg_2021.xlsx 
-│ │ ├── APL_inf_2021.xlsx 
-│ │ ├── APL_mk_2021.xlsx 
-│ │ ├── APL_sf_2021.xlsx 
-│ │ ├── APL_cd_2021.xlsx 
-│ │ └── v_commune_2024.csv 
-│ ├── **departements-20140306-5m-shp/**     # Shapefile for departments
-│ │ ├── departements-20140306-5m.shp 
-│ │ ├── departements-20140306-5m.dbf 
-│ │ ├── departements-20140306-5m.shx 
-│ │ └── … (other components) 
-│ ├── ZEAT_Reg_Dep.csv                   # For the mapping departments to ZEAT
-│ ├── popsdregagegender_2021_simple.csv  # French 2021 population by age and gender
-│ ├── lits-de-reanimation-de-soins-intensifs-et-de-surveillance-continue-en-france0.csv                                 # Objective data on number of beds 
-│ ├── demographieexercicesliberaux.csv   # Objective healthcare professionals count data 
-│ ├── honoraires.csv                     # Objective fees data 
-│ └── dep_santé.csv                      # Expenditure in health data by age/gender
-│ ├── **Scripts/** 
-│ ├── Aboudrar-Méda_Armande_Thesis_DS.Rmd # the master RMarkdown knitting everything  
-│ ├── 01_load_data.R                      # data loading + geometry setup  
-│ ├── 02_preprocess.R                     # recoding & missingness  
-│ ├── 03_eda.R                            # descriptive tables 
-│ ├── 04_efa.R                            # exploratory factor analysis 
-│ ├── 05_cfa.R                            # confirmatory factor analysis 
-│ ├── 06_clustering.R                     # k-means & Ward clustering
-│ ├── 07_objective.R                      # preprocessing objective data 
-│ ├── 08_modelingShortage.R               # mixed-effects for shortages
-│ ├── 09_modelingInequity.R               # mixed & ordinal models for inequity
-│ └── 10_SEMShortage.R                    # structural equation models  
-│ ├── **Docs/** 
-│ ├── Dictionary.xlsx                     # post-edited dictionary  
-│ └── My_Final_Variables_Dictionary.xlsx  # raw variables dictionary
-│ ├── config.R                            # loads packages, defines paths & helpers
-├── ThesisReplicationSet.Rproj  # RStudio project file
-└── README.md # you are here 
+ThesisReplicationSet/
+├── Data/
+│   ├── barometre/
+│   │   └── barometre2000_2022_diff.csv               # DREES survey data
+│   ├── APL/                                          # APL Excel files + 'commune' csv
+│   │   ├── APL_mg_2021.xlsx
+│   │   ├── APL_inf_2021.xlsx
+│   │   ├── APL_mk_2021.xlsx
+│   │   ├── APL_sf_2021.xlsx
+│   │   ├── APL_cd_2021.xlsx
+│   │   └── v_commune_2024.csv
+│   ├── departements-20140306-5m-shp/                 # Shapefiles for French departments
+│   │   ├── departements-20140306-5m.shp
+│   │   ├── departements-20140306-5m.dbf
+│   │   ├── departements-20140306-5m.shx
+│   │   └── ... (other shapefile components)
+│   ├── ZEAT_Reg_Dep.csv                              # Mapping departments to ZEAT
+│   ├── popsdregagegender_2021_simple.csv             # 2021 population by age/gender
+│   ├── lits-de-reanimation-de-soins-intensifs...csv  # ICU bed availability
+│   ├── demographieexercicesliberaux.csv              # Healthcare professionals count
+│   ├── honoraires.csv                                # Medical fees data
+│   └── dep_santé.csv                                 # Expenditure by age/gender
+│
+├── Scripts/                                          # Main workflow scripts
+│   ├── 01_load_data.R                                # Load data + GIS setup
+│   ├── 02_preprocess.R                               # Recoding & handling missingness
+│   ├── 03_eda.R                                      # Descriptive statistics
+│   ├── 04_efa.R                                      # Exploratory Factor Analysis
+│   ├── 05_cfa.R                                      # Confirmatory Factor Analysis
+│   ├── 06_clustering.R                               # Clustering (K-means, Ward)
+│   ├── 07_objective.R                                # Processing objective indicators
+│   ├── 08_modelingShortage.R                         # Mixed-effects for shortages
+│   ├── 09_modelingInequity.R                         # Mixed & ordinal models for inequity
+│   └── 10_SEMShortage.R                              # Structural equation modeling
+│
+├── Aboudrar-Méda_Armande_Thesis_DS.Rmd              # Main RMarkdown document
+├── config.R                                          # Loads packages, paths, and helpers
+│
+├── Docs/
+│   ├── Dictionary.xlsx                               # Final variable dictionary
+│   └── My_Final_Variables_Dictionary.xlsx            # Raw annotated dictionary
+│
+├── ThesisReplicationSet.Rproj                        # RStudio project file
+└── README.md                                         # This file
+
 
 ---
 
