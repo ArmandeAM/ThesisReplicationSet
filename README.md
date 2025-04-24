@@ -1,6 +1,6 @@
 # Armande Aboudrar-Méda, Thesis Replication Package 
 
-Welcome! This repository contains the complete replication set for my Master's Thesis titled *"From Reality to Perception: Trust, Socio-Political Attitudes, and Evolving Inequalities in French Healthcare"*. All code, data and documentation needed to reproduce every figure, table and model are here.
+Welcome! This repository contains the complete replication set for my Master's Thesis titled *"Perception vs. Provision: Trust, Ideology, and Subjective Healthcare Inequalities in France"*. All code, data and documentation needed to reproduce every figure, table and model are here.
 
 The analysis combines survey data: the Barometer from the DREES with 82,332 observations, reduced to 4002 observations for the year 2021 and objective data from the French Health Insurance, as well as geographic shapefiles and datasets allowing to get a geographic final dataset with a geometry by ZEAT region. Results include exploratory/confirmatory factor analysis, clustering, multilevel mixed models, multi-group SEMs, and a fully reproducible workflow.
 
