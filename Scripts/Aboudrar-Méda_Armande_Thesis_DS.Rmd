@@ -227,9 +227,6 @@ summary(fit_socio2, fit.measures = TRUE, standardized = TRUE)
 print("Factor Analysis for Healthcare Perceptions:")
 print(health_fa_oblimin_3fac)
 
-print("Factor Analysis for Healthcare Perceptions:")
-print(health_fa_oblimin_3fac)
-
 print(factor_correlation_health_3fac)
 
 print(health_fa_final_3fac)
@@ -448,20 +445,7 @@ ggplot(pc_df, aes(PC1, PC2, color = cluster)) +
        x = "PC1", y = "PC2") +
   theme_minimal()
 ```
-
-# 7. Objective datasets
-
-*We standardised practitioner counts, beds, and fees per 100 000 using a population that’s re-weighted by each region’s age–sex profile (see Appendix A.1). This corrects for differences in health needs across demographies (Gusmano et al., 2014; Bithorel & Reduron, 2023).*  
-`Scripts/07_objective.R`
-
-```{r std-pop, echo=FALSE}
-total_pop_std <- sum(pop_sdreg_standardized$pop_std, na.rm = TRUE)
-cat("Total standardized population (fast check):", total_pop_std, "\n") # The total_pop_std gives a total population very close to the real Metropolitan France population. 
-```
-
-```{r show-mergedmap-head, echo=FALSE}
-print(head(merged_map))
-```
+**How do variables differ according to clusters** 
 
 ```{r habitat-by-cluster, echo=FALSE}
 habitat_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$habitat)
@@ -544,22 +528,16 @@ Barometre_2021 <- Barometre_2021 %>%
     )
   )
 
-# 2) Create a contingency table: cluster vs. age group
 age_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$sdagetr_factor)
 
-# 3) Calculate row-wise percentages (within each cluster)
 age_prop <- prop.table(age_table, margin = 1) * 100
 
-# 4) Convert to a data frame and round to one decimal
 age_df <- as.data.frame.matrix(round(age_prop, 1))
 
-# 5) Label the row names (clusters) as needed
 rownames(age_df) <- c("Cluster 1", "Cluster 2", "Cluster 3")
 
-# 6) Print the distribution table using kable
 kable(age_df, caption = "Percentage Distribution of Age Group (SDAGETR) by Cluster (Ward-Initiated K-means)")
 
-# 7) Chi-square test to see if the distribution of age differs by cluster
 chi_age <- chisq.test(age_table)
 
 chi_summary_age <- data.frame(
@@ -641,6 +619,20 @@ chi_summary_sdreg <- data.frame(
   p_value   = chi_sdreg$p.value
 )
 kable(chi_summary_sdreg, caption = "Chi-Square Test Summary for sdreg by Cluster")
+```
+
+# 7. Objective datasets
+
+*We standardised practitioner counts, beds, and fees per 100 000 using a population that’s re-weighted by each region’s age–sex profile (see Appendix A.1). This corrects for differences in health needs across demographies (Gusmano et al., 2014; Bithorel & Reduron, 2023).*  
+`Scripts/07_objective.R`
+
+```{r std-pop, echo=FALSE}
+total_pop_std <- sum(pop_sdreg_standardized$pop_std, na.rm = TRUE)
+cat("Total standardized population (fast check):", total_pop_std, "\n") # The total_pop_std gives a total population very close to the real Metropolitan France population. 
+```
+
+```{r show-mergedmap-head, echo=FALSE}
+print(head(merged_map))
 ```
 
 # 7.1 Comparison: maps
@@ -789,13 +781,13 @@ summary(model_lmm)
 ```{r model1-checks}
 print(vifs)
 
-# 3. Residuals vs. Fitted Plot for the Mixed Model
+# Residuals vs. Fitted Plot for the Mixed Model
 plot(fitted(model_lmm), resid(model_lmm),
      xlab = "Fitted Values", ylab = "Residuals",
      main = "Residuals vs. Fitted Values")
 abline(h = 0, col = "red")
 
-# 4. Residuals vs. Predictor Plots in a 2x4 grid
+# Residuals vs. Predictor Plots in a 2x4 grid
 df_used_model <- model.frame(model_lmm)  # data used in model_lmm
 df_used_model$resid <- residuals(model_lmm)
 predictors <- c("trustMedSci_index_std", "trustPolPub_index_std", "trustOnline_index_std",
@@ -810,11 +802,11 @@ for (var in predictors) {
 }
 par(op)
 
-# 5. QQ Plot for Model Residuals
+# QQ Plot for Model Residuals
 qqnorm(resid(model_lmm), main = "QQ Plot of Model Residuals")
 qqline(resid(model_lmm), col = "red")
 
-# 6. QQ Plot for Random Intercepts (sdreg)
+# QQ Plot for Random Intercepts (sdreg)
 ranef_sdreg <- ranef(model_lmm)$sdreg[, "(Intercept)"]
 qqnorm(ranef_sdreg, main = "QQ Plot of Random Intercepts (sdreg)")
 qqline(ranef_sdreg, col = "red")
@@ -827,13 +819,13 @@ summary(model_lmm2) # In the model 2, at the individual level, the three indices
 ```{r model2-checks}
 print(vifs)
 
-# 3. Residuals vs. Fitted Plot for the Mixed Model
+# Residuals vs. Fitted Plot for the Mixed Model
 plot(fitted(model_lmm2), resid(model_lmm2),
      xlab = "Fitted Values", ylab = "Residuals",
      main = "Residuals vs. Fitted Values")
 abline(h = 0, col = "red")
 
-# 4. Residuals vs. Predictor Plots in a 2x4 grid
+# Residuals vs. Predictor Plots in a 2x4 grid
 df_used_model2 <- model.frame(model_lmm2)  # data used in model_lmm
 df_used_model2$resid <- residuals(model_lmm2)
 predictors2 <- c("trustMedSci_index_std", "trustPolPub_index_std", "trustOnline_index_std",
@@ -848,11 +840,11 @@ for (var in predictors2) {
 }
 par(op)
 
-# 5. QQ Plot for Model Residuals
+# QQ Plot for Model Residuals
 qqnorm(resid(model_lmm2), main = "QQ Plot of Model Residuals")
 qqline(resid(model_lmm2), col = "red")
 
-# 6. QQ Plot for Random Intercepts (sdreg)
+# QQ Plot for Random Intercepts (sdreg)
 ranef_sdreg2 <- ranef(model_lmm2)$sdreg[, "(Intercept)"]
 qqnorm(ranef_sdreg2, main = "QQ Plot of Random Intercepts (sdreg)")
 qqline(ranef_sdreg2, col = "red")
@@ -865,13 +857,13 @@ summary(model_lmm3) # In the model 3, at the individual level, the socio-politic
 ```{r model3-checks}
 print(vifs)
 
-# 3. Residuals vs. Fitted Plot for the Mixed Model
+# Residuals vs. Fitted Plot for the Mixed Model
 plot(fitted(model_lmm3), resid(model_lmm3),
      xlab = "Fitted Values", ylab = "Residuals",
      main = "Residuals vs. Fitted Values")
 abline(h = 0, col = "red")
 
-# 4. Residuals vs. Predictor Plots in a 2x4 grid
+# Residuals vs. Predictor Plots in a 2x4 grid
 df_used_model3 <- model.frame(model_lmm3)  # data used in model_lmm
 df_used_model3$resid <- residuals(model_lmm3)
 predictors3 <- c("trustMedSci_index_std", "trustPolPub_index_std", "trustOnline_index_std",
@@ -886,11 +878,11 @@ for (var in predictors3) {
 }
 par(op)
 
-# 5. QQ Plot for Model Residuals
+# QQ Plot for Model Residuals
 qqnorm(resid(model_lmm3), main = "QQ Plot of Model Residuals")
 qqline(resid(model_lmm3), col = "red")
 
-# 6. QQ Plot for Random Intercepts (sdreg)
+# QQ Plot for Random Intercepts (sdreg)
 ranef_sdreg3 <- ranef(model_lmm3)$sdreg[, "(Intercept)"]
 qqnorm(ranef_sdreg3, main = "QQ Plot of Random Intercepts (sdreg)")
 qqline(ranef_sdreg3, col = "red")
@@ -1093,7 +1085,6 @@ summary(fit_mg, fit.measures = TRUE, standardized = TRUE)
 
 ```{r interpret_lmm4}
 # For lmm4 for healthShortage
-library(broom.mixed)
 tidy_lmm4 <- tidy(model_lmm4, effects = "fixed", conf.int = TRUE)
 print(tidy_lmm4)
 
@@ -1123,13 +1114,13 @@ print(clmm_results, digits = 3)
 
 ```{r}
 # pull off the two cutpoints alpha and the fixed effects Beta
-alpha <- model_clmm$alpha           # vector of thresholds; alpha[2] is the cutpoint for "Perceive inequality"
+alpha <- model_clmm$alpha           # vector of thresholds; alpha[2] is the cutpoint for "Perceive inequity"
 betas <- summary(model_clmm)$beta   # named vector of slopes
 
 # baseline P(Y="Perceive inequality") when all predictors = 0
 P0 <- 1 - plogis(alpha[2])
 
-# for each predictor, shift the linear predictor by beta and recompute P
+# for each predictor, we shift the linear predictor by beta and recompute P
 delta_pp <- sapply(betas, function(b) {
   P1 <- 1 - plogis(alpha[2] - b)
   100 * (P1 - P0)
