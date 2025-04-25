@@ -69,27 +69,42 @@ run_ward_kmeans <- function(scaled_data, k) { # use Ward’s method to get initi
   return(km_ward)
 }
 
+# Our final clustering is needed for the SEM 
+
 # Define the variables to use in clustering
 cluster_vars <- c("healthShortage", "healthInequity", 
-                    "trustOnline", "trustMedSci", "trustPolPub", 
-                    "familyHealth", "SocialProtection", 
-                    "UnemploymentPensions")
+                  "trustOnline", "trustMedSci", "trustPolPub", 
+                  "benefits", "SocialProtection")
 
 # Prepare the data for clustering
 cluster_prep <- prepare_cluster_data(Barometre_2021, cluster_vars)
 scaled_data <- cluster_prep$data_scaled
 complete_idx <- cluster_prep$complete_idx
 
+# Plot the elbow method to decide on the number of clusters
+plot_elbow(scaled_data, max_k = 10)
+
+# Plot the distributions of the scaled cluster data variables
+plot_cluster_distributions(scaled_data)
+
 # Deciding on k = 3 based on the above analyses:
 set.seed(123)
 km3 <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
 
-# Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
-Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3$cluster, "cluster_k3") # add the k=3 labels back into the main dataset
+# Inspect cluster centers and sizes:
+print(as.data.frame(km3$centers))
+print(table(km3$cluster))
 
-# Deciding on k = 3 based on the above analyses:
+# Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3$cluster, "cluster_k3")
+
+# Testing k=4 
 set.seed(123)
 km4 <- run_kmeans_for_k(scaled_data, k = 4, nstart = 25)
+
+# Inspect cluster centers and sizes:
+print(as.data.frame(km4$centers))
+print(table(km4$cluster))
 
 Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km4$cluster, "cluster_k4")
 
@@ -97,4 +112,11 @@ Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km4$cluster, "cl
 
 # Run Ward-initiated k-means for k = 3
 km_ward3 <- run_ward_kmeans(scaled_data, k = 3)
+print(as.data.frame(km_ward3$centers))
+print(table(km_ward3$cluster))
 Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3$cluster, "cluster_ward_k3")
+
+# Check: Internal validity
+
+int_crit <- intCriteria(as.matrix(scaled_data), km_ward3$cluster,
+                        c("Calinski_Harabasz"))

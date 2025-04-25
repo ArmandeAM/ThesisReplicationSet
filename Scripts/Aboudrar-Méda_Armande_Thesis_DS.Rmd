@@ -73,7 +73,7 @@ knitr::kable(sa06_by_region, caption="SA06: % Agree by Region")
 knitr::kable(sa09_table, caption="Accessibility items (SA09)")
 ```
 
-```{r sa06-region, echo=FALSE}
+```{r sa09-region, echo=FALSE}
 knitr::kable(sa09_table_sdreg, caption="SA09 by Region")
 ```
 
@@ -269,34 +269,34 @@ plot_elbow(scaled_data, max_k = 10)
 # Plot the distributions of the scaled cluster data variables
 plot_cluster_distributions(scaled_data)
 
-# Suppose we decide on k = 3 based on the above analyses:
+# Deciding on k=3 based on the previous analysis 
 set.seed(123)
-km3 <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
+km3_ineq <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
 
 # Inspect cluster centers and sizes:
-print(as.data.frame(km3$centers))
-print(table(km3$cluster))
+print(as.data.frame(km3_ineq$centers))
+print(table(km3_ineq$cluster))
 
 # Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
-Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3$cluster, "cluster_k3")
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3_ineq$cluster, "cluster_k3_ineq")
 
-# Suppose we decide on k = 3 based on the above analyses:
+# Testing k=4 based on the above analyses:
 set.seed(123)
-km4 <- run_kmeans_for_k(scaled_data, k = 4, nstart = 25)
+km4_ineq <- run_kmeans_for_k(scaled_data, k = 4, nstart = 25)
 
 # Inspect cluster centers and sizes:
-print(as.data.frame(km4$centers))
-print(table(km4$cluster))
+print(as.data.frame(km4_ineq$centers))
+print(table(km4_ineq$cluster))
 
-Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km4$cluster, "cluster_k4")
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km4_ineq$cluster, "cluster_k4_ineq")
 
 # --- Ward-based (Hybrid) Clustering ---
 
 # Run Ward-initiated k-means for k = 3
-km_ward3 <- run_ward_kmeans(scaled_data, k = 3)
-print(as.data.frame(km_ward3$centers))
-print(table(km_ward3$cluster))
-Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3$cluster, "cluster_ward_k3")
+km_ward3_ineq <- run_ward_kmeans(scaled_data, k = 3)
+print(as.data.frame(km_ward3_ineq$centers))
+print(table(km_ward3_ineq$cluster))
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3_ineq$cluster, "cluster_ward_k3_ineq")
 ```
 
 ```{r clustering-without-inequality_trend, echo=FALSE}
@@ -314,34 +314,34 @@ plot_elbow(scaled_data, max_k = 10)
 # Plot the distributions of the scaled cluster data variables
 plot_cluster_distributions(scaled_data)
 
-# Suppose we decide on k = 3 based on the above analyses:
+# Deciding on k = 3 based on the above analyses:
 set.seed(123)
-km3 <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
+km3_noineq <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
 
 # Inspect cluster centers and sizes:
-print(as.data.frame(km3$centers))
-print(table(km3$cluster))
+print(as.data.frame(km3_noineq$centers))
+print(table(km3_noineq$cluster))
 
 # Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
-Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3$cluster, "cluster_k3")
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3_noineq$cluster, "cluster_k3_noineq")
 
-# Suppose we decide on k = 3 based on the above analyses:
+# Testing k=4
 set.seed(123)
-km4 <- run_kmeans_for_k(scaled_data, k = 4, nstart = 25)
+km4_noineq <- run_kmeans_for_k(scaled_data, k = 4, nstart = 25)
 
 # Inspect cluster centers and sizes:
-print(as.data.frame(km4$centers))
-print(table(km4$cluster))
+print(as.data.frame(km4_noineq$centers))
+print(table(km4_noineq$cluster))
 
-Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km4$cluster, "cluster_k4")
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km4_noineq$cluster, "cluster_k4_noineq")
 
 # --- Ward-based (Hybrid) Clustering ---
 
 # Run Ward-initiated k-means for k = 3
-km_ward3 <- run_ward_kmeans(scaled_data, k = 3)
-print(as.data.frame(km_ward3$centers))
-print(table(km_ward3$cluster))
-Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3$cluster, "cluster_ward_k3")
+km_ward3_noineq <- run_ward_kmeans(scaled_data, k = 3)
+print(as.data.frame(km_ward3_noineq$centers))
+print(table(km_ward3_noineq$cluster))
+Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3_noineq$cluster, "cluster_ward_k3_noineq")
 ```
 
 ```{r clustering-with-sociopol2, echo=FALSE}
@@ -361,7 +361,7 @@ plot_elbow(scaled_data, max_k = 10)
 # Plot the distributions of the scaled cluster data variables
 plot_cluster_distributions(scaled_data)
 
-# Suppose we decide on k = 3 based on the above analyses:
+# Deciding on k = 3 based on the above analyses:
 set.seed(123)
 km3 <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
 
@@ -372,7 +372,7 @@ print(table(km3$cluster))
 # Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
 Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3$cluster, "cluster_k3")
 
-# Suppose we decide on k = 3 based on the above analyses:
+# Testing k=4 
 set.seed(123)
 km4 <- run_kmeans_for_k(scaled_data, k = 4, nstart = 25)
 
@@ -389,6 +389,29 @@ km_ward3 <- run_ward_kmeans(scaled_data, k = 3)
 print(as.data.frame(km_ward3$centers))
 print(table(km_ward3$cluster))
 Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3$cluster, "cluster_ward_k3")
+```
+
+```{r silhouette-kmward}
+sil_ward3 <- silhouette(km_ward3$cluster, dist(scaled_data))
+cat("Ward-KMeans avg silhouette:", mean(sil_ward3[, "sil_width"]), "\n")
+```
+
+```{r checks-kmward}
+# Internal criteria
+kable(as.data.frame(int_crit), caption = "Internal Clustering Validity Indices (Ward-KMeans, k=3)")
+```
+
+```{r pcaplot-kmward}
+pca_res <- prcomp(scaled_data, center = TRUE, scale. = TRUE)
+pca_df <- data.frame(PC1 = pca_res$x[,1], PC2 = pca_res$x[,2],
+                     cluster = factor(km_ward3$cluster))
+
+ggplot(pca_df, aes(x = PC1, y = PC2, color = cluster)) +
+  geom_point(alpha = 0.6, size = 1.5) +
+  labs(title = "PCA of Cluster Variables by Ward-KMeans (k=3)",
+       x = "PC1", y = "PC2") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ```{r interpretation-lastcluster-kmward}
@@ -410,6 +433,21 @@ cluster_interpretation <- data.frame(
 kable(cluster_interpretation, caption = "Cluster Interpretations")
 ```
 
+```{r pam, echo=FALSE}
+# Silhouette plot for PAM
+sil_pam3 <- silhouette(pam3$clustering, dist(scaled_data))
+plot(sil_pam3, main = "Silhouette Plot: PAM (k=3)")
+
+# PCA scatter of your data
+pca     <- prcomp(scaled_data, scale = FALSE)
+pc_df   <- data.frame(PC1 = pca$x[,1], PC2 = pca$x[,2], 
+                      cluster = factor(pam3$clustering))
+ggplot(pc_df, aes(PC1, PC2, color = cluster)) +
+  geom_point(alpha = 0.7, size = 2) +
+  labs(title = "PCA of Cluster Variables by PAM (k=3)",
+       x = "PC1", y = "PC2") +
+  theme_minimal()
+```
 
 # 7. Objective datasets
 
@@ -425,7 +463,7 @@ cat("Total standardized population (fast check):", total_pop_std, "\n") # The to
 print(head(merged_map))
 ```
 
-```{r}
+```{r habitat-by-cluster, echo=FALSE}
 habitat_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$habitat)
 habitat_df <- as.data.frame.matrix(habitat_table)
 colnames(habitat_df) <- c("Rural", "<20k", "20k-99k", "100k+", "Paris Agglo")
@@ -442,7 +480,7 @@ chi_summary <- data.frame(
 kable(chi_summary, caption = "Chi-Square Test Summary")
 ```
 
-```{r}
+```{r sdnivie-by-cluster, echo=FALSE}
 sdnivie_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$sdnivie)
 
 sdnivie_prop <- prop.table(sdnivie_table, margin = 1) * 100
@@ -470,7 +508,7 @@ chi_summary_sdnivie <- data.frame(
 kable(chi_summary_sdnivie, caption = "Chi-Square Test Summary for sdnivie by Cluster")
 ```
 
-```{r}
+```{r sdpcs7-by-cluster, echo=FALSE}
 Barometre_2021 <- Barometre_2021 %>%
   mutate(sdpcs7_factor = factor(sdpcs7, 
          levels = 1:7,
@@ -496,7 +534,7 @@ chi_sdpcs7 <- chisq.test(sdpcs7_table)
 print(chi_sdpcs7)
 ```
 
-```{r}
+```{r sdagetr-by-cluster, echo=FALSE}
 Barometre_2021 <- Barometre_2021 %>%
   mutate(
     sdagetr_factor = factor(
@@ -532,7 +570,7 @@ chi_summary_age <- data.frame(
 kable(chi_summary_age, caption = "Chi-Square Test Summary for Age by Cluster")
 ```
 
-```{r}
+```{r sddipl-by-cluster, echo=FALSE}
 Barometre_2021 <- Barometre_2021 %>%
   mutate(
     sddipl_factor = factor(
@@ -577,7 +615,7 @@ kable(
 )
 ```
 
-```{r}
+```{r sdreg-by-cluster, echo=FALSE}
 sdreg_table <- table(Barometre_2021$cluster_ward_k3, Barometre_2021$sdreg)
 
 sdreg_prop <- prop.table(sdreg_table, margin = 1) * 100
@@ -932,6 +970,9 @@ plot(fitted_vals, residuals_lmm,
 abline(h = 0, col = "red")
 
 shapiro.test(residuals_lmm)
+```
+```{r modelInequity-checkRI}
+cat("LR stat =", D2, " df =", df_diff, " p =", p_val, "\n")
 ```
 
 ```{r model-Inequity-plot}
