@@ -5,7 +5,7 @@ required_pkgs <- c(
   "here", "readxl", "dplyr", "tidyr", "readr", "writexl", "sf",
   "ggplot2", "viridis", "stringr", "knitr", "psych", "naniar",
   "REdaS", "GPArotation", "dagitty", "lavaan", "ordinal", "patchwork",
-  "performance", "lme4", "car", "broom.mixed", "kableExtra"
+  "performance", "lme4", "car", "broom.mixed", "kableExtra", "clusterCrit"
 )
 for(pkg in required_pkgs) {
   if (!requireNamespace(pkg, quietly = TRUE)) install.packages(pkg)

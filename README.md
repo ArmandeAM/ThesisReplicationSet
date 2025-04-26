@@ -94,7 +94,7 @@ This project replicates the analyses described in my Master's Thesis. The key co
   `here`, `readxl`, `dplyr`, `tidyr`, `readr`, `writexl`, `sf`, `ggplot2`,  
   `viridis`, `stringr`, `knitr`, `psych`, `naniar`, `REdaS`, `GPArotation`,
   `dagitty`, `lavaan`, `ordinal`, `patchwork`, `performance`, `lme4`, `car`,
-  `broom.mixed`, `kableExtra`
+  `broom.mixed`, `kableExtra`, `clusterCrit`
 
 ### Installation Instructions
 
