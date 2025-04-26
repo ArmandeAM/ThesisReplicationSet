@@ -212,8 +212,6 @@ model_lmm4 <- lmer(
   data = Barometre_2021_final_nomiss
 )
 
-summary(model_lmm4)
-
 # Checks Model 4
 # ----------------------------
 # Model 4 diagnostics — Outlier/Influence: approximate via leverage from OLS

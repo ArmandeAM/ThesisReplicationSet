@@ -223,7 +223,7 @@ summary(fit_socio2, fit.measures = TRUE, standardized = TRUE)
 ```
 
 ```{r 3factorsHealthPerceptionsEFA, echo=FALSE}
-# Sensitivity check : 3 factors for Healthcare Perceptions: better fit in the CFA but no variable load in the third factor. 
+# Sensitivity check : 3 factors for Healthcare Perceptions: better fit in the CFA but no variable loads in the third factor. 
 print("Factor Analysis for Healthcare Perceptions:")
 print(health_fa_oblimin_3fac)
 
@@ -274,7 +274,7 @@ km3_ineq <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
 print(as.data.frame(km3_ineq$centers))
 print(table(km3_ineq$cluster))
 
-# Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
+# Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3_ineq")
 Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3_ineq$cluster, "cluster_k3_ineq")
 
 # Testing k=4 based on the above analyses:
@@ -319,7 +319,7 @@ km3_noineq <- run_kmeans_for_k(scaled_data, k = 3, nstart = 25)
 print(as.data.frame(km3_noineq$centers))
 print(table(km3_noineq$cluster))
 
-# Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3")
+# Merge the cluster assignments back into Barometre_2021 (naming the column "cluster_k3_noineq")
 Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km3_noineq$cluster, "cluster_k3_noineq")
 
 # Testing k=4
@@ -813,7 +813,7 @@ qqline(ranef_sdreg, col = "red")
 ```
 
 ```{r model2}
-summary(model_lmm2) # In the model 2, at the individual level, the three indices for trust are kept. The socio-political attitudes variables include an index of variables related to social protection, an index of variable related to the benefits that have an "universalist" support and an index of variavles for benefits that have a "contributory" support. Inequality_trend is not included anymore.
+summary(model_lmm2) # In the model 2, at the individual level, the three indices for trust are kept. The socio-political attitudes variables include an index of variables related to social protection, an index of variable related to the benefits that have an "universalist" support and an index of variables for benefits that have a "contributory" support. Inequality_trend is not included anymore.
 ```
 
 ```{r model2-checks}
@@ -922,10 +922,8 @@ boxplot(resid_values ~ sdreg, data = df_used,
 vif(lm_for_vif)
 ```
 
-Adding the random intercept for regions improves the fit of the model even if regional variation only explains 10% of the variance. 
-
 ```{r model4-checkRI}
-cat("LR stat =", D, " df =", df_diff, " p =", p_val, "\n")
+cat("LR stat =", D, " df =", df_diff, " p =", p_val, "\n") #Adding the random intercept for regions improves the fit of the model even if regional variation only explains 10% of the variance. 
 ```
 
 # 9. Modeling Inequity 
@@ -937,7 +935,7 @@ cat("LR stat =", D, " df =", df_diff, " p =", p_val, "\n")
 *Trust in medical/science and pro-welfare attitudes are significantly associated with higher odds of reporting inequity.* `Scripts/09_modelingInequity.R`  
 
 ```{r model-Inequity}
-summary(model_lmmInequa)
+summary(model_lmmInequa) # just for comparison of the estimates, the checks show non-normality of the residuals 
 ```
 
 ```{r model-Inequity-checks}
@@ -1269,7 +1267,11 @@ cat(latex_table)
 
 Aday, L. A., & Andersen, R. (1974). A framework for the study of access to medical care. Health Services Research, 9(3), 208–220.
 
+Bates, D., Mächler, M., Bolker, B., & Walker, S. (2015). Fitting Linear Mixed-Effects Models Using lme4. Journal of Statistical Software, 67(1), 1–48. https://doi.org/10.18637/jss.v067.i01
+
 Bithorel, P.-L., & Reduron, V. (2023, April). Dépenses de santé et restes à charge pour les patients: Comment expliquer les disparités entre départements? Études et résultats (1265). DREES.
+
+Christensen, R. H. B. (2019). Cumulative link models for ordinal regression with the R package ordinal (R package version 2019.12-10) [Manual]. Retrieved from https://cran.r-project.org/web/packages/ordinal/vignettes/clm_article.pdf
 
 Claassen, C. (2022, November 29). Including measurement uncertainty in time-series, cross-sectional analyses: The case of mood and democracy. SSRN. http://dx.doi.org/10.2139/ssrn.3924934
 
