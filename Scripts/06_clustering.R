@@ -120,3 +120,19 @@ Barometre_2021 <- assign_clusters(Barometre_2021, complete_idx, km_ward3$cluster
 
 int_crit <- intCriteria(as.matrix(scaled_data), km_ward3$cluster,
                         c("Calinski_Harabasz"))
+
+# Check : PAM
+
+## Data prep for PAM
+cluster_vars <- c("healthShortage","healthInequity",
+                  "trustOnline","trustMedSci","trustPolPub",
+                  "familyHealth","SocialProtection",
+                  "UnemploymentPensions")
+
+cluster_prep   <- prepare_cluster_data(Barometre_2021, cluster_vars)
+scaled_data    <- cluster_prep$data_scaled
+complete_idx   <- cluster_prep$complete_idx
+
+pam3 <- pam(scaled_data, k = 3)
+Barometre_2021$cluster_pam3 <- NA
+Barometre_2021$cluster_pam3[complete_idx] <- pam3$clustering
