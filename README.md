@@ -68,16 +68,16 @@ This project replicates the analyses described in my Master's Thesis. The key co
   Loading and cleaning survey (barometer) data, including detailed recoding of variables and handling missing data.
 
 - **Objective Data Integration:**  
-  Merging various administrative datasets (population, healthcare expenditure, effectifs, honoraires) and standardising variables per 100,000 population.
+  Merging various administrative datasets (population, healthcare expenditure, effectifs, honoraires) and standardising variables per 100,000 "in need for healthcare" population.
 
-- **Factor Analysis:**  
+- **Exploratory and Confirmatory Factor Analysis:**  
   Conducting exploratory and confirmatory factor analyses (EFA/CFA) using polychoric correlations.
 
 - **Clustering:**  
   Using k-means and Ward-based clustering to identify respondent profiles.
 
 - **Modeling and SEM:**  
-  Fitting mixed-effects models and structural equation models (SEM) to examine determinants of healthcare perceptions and inequality.
+  Fitting mixed-effects models and structural equation models (SEM) to examine determinants of healthcare shortages and inequity perceptions.
 
 ---
 
